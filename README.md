@@ -1,15 +1,19 @@
 # GIS Search API
 
-API FastAPI para busca geoespacial.
+API FastAPI para busca geoespacial com PostgreSQL.
 
 ## Requisitos
 
 - Python 3.10+
-- Ambiente virtual (venv)
+- Docker e Docker Compose
+- Ambiente virtual (venv) - opcional para desenvolvimento local
 
-## Instalação
+## Instalação com Docker (Recomendado)
 
 ```bash
+# Subir banco de dados PostgreSQL
+docker-compose up -d
+
 # Criar e ativar ambiente virtual
 python -m venv venv
 source venv/bin/activate  # Linux/macOS
@@ -22,6 +26,8 @@ pip install -r requirements.txt
 ## Execução
 
 ```bash
+# Certifique-se que o PostgreSQL está rodando (docker-compose up -d)
+
 # Desenvolvimento (com hot reload)
 uvicorn main:app --reload
 
@@ -30,6 +36,18 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 A API estará disponível em `http://localhost:8000`.
+
+## Parar serviços
+
+```bash
+docker-compose down
+```
+
+## Parar e remover volumes (apaga dados do banco)
+
+```bash
+docker-compose down -v
+```
 
 ## Endpoints
 
