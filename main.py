@@ -1,12 +1,15 @@
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, String, Float, Text, select
+from sqlalchemy import Column, String, Text, select, func
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
-from typing import Optional
+from geoalchemy2 import Geography, functions as geofunc
+from geoalchemy2.shape import to_shape
+from shapely.geometry import Point, mapping
+from typing import Optional, List
 
 DATABASE_URL = "postgresql+asyncpg://gis_user:gis_password@localhost:5432/gis_search"
 
@@ -19,10 +22,9 @@ class LocationModel(Base):
     __tablename__ = "locations"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid4()))
-    latitude = Column(Float, nullable=False)
-    longitude = Column(Float, nullable=False)
     address = Column(Text, nullable=False)
     place_type = Column(String(100), nullable=False)
+    geom = Column(Geography(geometry_type="POINT", srid=4326), nullable=False)
 
 
 class LocationBase(BaseModel):
@@ -50,15 +52,33 @@ class Location(LocationBase):
         from_attributes = True
 
 
+class LocationWithDistance(Location):
+    distance_meters: Optional[float] = None
+
+
 async def get_db() -> AsyncSession:
     async with async_session_maker() as session:
         yield session
+
+
+def point_to_ewkt(lat: float, lon: float) -> str:
+    return f"SRID=4326;POINT({lon} {lat})"
+
+
+def ewkt_to_lat_lon(ewkt: str) -> tuple[float, float]:
+    point = to_shape(ewkt)
+    return point.y, point.x
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Create spatial index
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_locations_geom ON locations USING GIST (geom)"
+        )
+        await conn.commit()
     yield
     await engine.dispose()
 
@@ -73,18 +93,40 @@ async def health_check():
 
 @app.post("/locations", response_model=Location, status_code=201)
 async def create_location(location: LocationCreate, db: AsyncSession = Depends(get_db)):
-    db_location = LocationModel(**location.model_dump())
+    geom_ewkt = point_to_ewkt(location.latitude, location.longitude)
+    db_location = LocationModel(
+        address=location.address,
+        place_type=location.place_type,
+        geom=geom_ewkt,
+    )
     db.add(db_location)
     await db.commit()
     await db.refresh(db_location)
-    return db_location
+
+    lat, lon = ewkt_to_lat_lon(db_location.geom)
+    return Location(
+        id=db_location.id,
+        latitude=lat,
+        longitude=lon,
+        address=db_location.address,
+        place_type=db_location.place_type,
+    )
 
 
 @app.get("/locations", response_model=list[Location])
 async def list_locations(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(LocationModel))
     locations = result.scalars().all()
-    return locations
+    return [
+        Location(
+            id=loc.id,
+            latitude=ewkt_to_lat_lon(loc.geom)[0],
+            longitude=ewkt_to_lat_lon(loc.geom)[1],
+            address=loc.address,
+            place_type=loc.place_type,
+        )
+        for loc in locations
+    ]
 
 
 @app.get("/locations/{location_id}", response_model=Location)
@@ -93,7 +135,15 @@ async def get_location(location_id: str, db: AsyncSession = Depends(get_db)):
     location = result.scalar_one_or_none()
     if not location:
         raise HTTPException(status_code=404, detail="Local não encontrado")
-    return location
+
+    lat, lon = ewkt_to_lat_lon(location.geom)
+    return Location(
+        id=location.id,
+        latitude=lat,
+        longitude=lon,
+        address=location.address,
+        place_type=location.place_type,
+    )
 
 
 @app.put("/locations/{location_id}", response_model=Location)
@@ -104,12 +154,27 @@ async def update_location(location_id: str, location_update: LocationUpdate, db:
         raise HTTPException(status_code=404, detail="Local não encontrado")
 
     update_data = location_update.model_dump(exclude_unset=True)
+
+    if "latitude" in update_data or "longitude" in update_data:
+        lat = update_data.get("latitude", ewkt_to_lat_lon(location.geom)[0])
+        lon = update_data.get("longitude", ewkt_to_lat_lon(location.geom)[1])
+        location.geom = point_to_ewkt(lat, lon)
+
     for key, value in update_data.items():
-        setattr(location, key, value)
+        if key not in ("latitude", "longitude"):
+            setattr(location, key, value)
 
     await db.commit()
     await db.refresh(location)
-    return location
+
+    lat, lon = ewkt_to_lat_lon(location.geom)
+    return Location(
+        id=location.id,
+        latitude=lat,
+        longitude=lon,
+        address=location.address,
+        place_type=location.place_type,
+    )
 
 
 @app.delete("/locations/{location_id}", status_code=204)
@@ -120,3 +185,35 @@ async def delete_location(location_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Local não encontrado")
     await db.delete(location)
     await db.commit()
+
+
+@app.get("/locations/nearby", response_model=list[LocationWithDistance])
+async def find_nearby(
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    radius_meters: float = Query(1000, gt=0, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    point_ewkt = point_to_ewkt(latitude, longitude)
+
+    result = await db.execute(
+        select(
+            LocationModel,
+            geofunc.ST_Distance(LocationModel.geom, point_ewkt).label("distance"),
+        )
+        .where(geofunc.ST_DWithin(LocationModel.geom, point_ewkt, radius_meters))
+        .order_by(geofunc.ST_Distance(LocationModel.geom, point_ewkt))
+    )
+
+    locations = result.all()
+    return [
+        LocationWithDistance(
+            id=loc.id,
+            latitude=ewkt_to_lat_lon(loc.geom)[0],
+            longitude=ewkt_to_lat_lon(loc.geom)[1],
+            address=loc.address,
+            place_type=loc.place_type,
+            distance_meters=round(distance, 2),
+        )
+        for loc, distance in locations
+    ]

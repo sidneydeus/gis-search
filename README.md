@@ -1,6 +1,6 @@
 # GIS Search API
 
-API FastAPI para busca geoespacial com PostgreSQL.
+API FastAPI para busca geoespacial com PostgreSQL + PostGIS.
 
 ## Requisitos
 
@@ -11,7 +11,7 @@ API FastAPI para busca geoespacial com PostgreSQL.
 ## Instalação com Docker (Recomendado)
 
 ```bash
-# Subir banco de dados PostgreSQL
+# Subir banco de dados PostgreSQL com PostGIS
 docker-compose up -d
 
 # Criar e ativar ambiente virtual
@@ -61,6 +61,10 @@ docker-compose down -v
 - `PUT /locations/{id}` - Atualizar local (parcial)
 - `DELETE /locations/{id}` - Deletar local
 
+### Busca Geoespacial (PostGIS)
+- `GET /locations/nearby` - Buscar locais próximos
+  - Query params: `latitude`, `longitude`, `radius_meters` (opcional, padrão 1000m, máx 50000m)
+
 ### Modelo de Local
 ```json
 {
@@ -77,3 +81,10 @@ docker-compose down -v
 - `longitude`: -180 a 180
 - `address`: 1-255 caracteres
 - `place_type`: 1-100 caracteres
+
+### Exemplo de busca por proximidade
+```bash
+curl "http://localhost:8000/locations/nearby?latitude=-23.5505&longitude=-46.6333&radius_meters=5000"
+```
+
+Retorna locais ordenados por distância (mais próximos primeiro) com campo `distance_meters`.
