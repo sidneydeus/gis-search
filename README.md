@@ -33,4 +33,29 @@ A API estará disponível em `http://localhost:8000`.
 
 ## Endpoints
 
+### Health Check
 - `GET /health` - Health check
+
+### Locais (CRUD)
+- `POST /locations` - Criar novo local
+- `GET /locations` - Listar todos os locais
+- `GET /locations/{id}` - Buscar local por ID
+- `PUT /locations/{id}` - Atualizar local (parcial)
+- `DELETE /locations/{id}` - Deletar local
+
+### Modelo de Local
+```json
+{
+  "id": "uuid",
+  "latitude": -23.5505,
+  "longitude": -46.6333,
+  "address": "Av. Paulista, 1000",
+  "place_type": "restaurante"
+}
+```
+
+**Validações:**
+- `latitude`: -90 a 90
+- `longitude`: -180 a 180
+- `address`: 1-255 caracteres
+- `place_type`: 1-100 caracteres
