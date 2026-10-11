@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, String, Text, select, func
+from sqlalchemy import Column, String, Text, select, func, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from geoalchemy2 import Geography, functions as geofunc
@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         # Create spatial index
         await conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_locations_geom ON locations USING GIST (geom)"
+            text("CREATE INDEX IF NOT EXISTS idx_locations_geom ON locations USING GIST (geom)")
         )
         await conn.commit()
     yield
@@ -126,6 +126,38 @@ async def list_locations(db: AsyncSession = Depends(get_db)):
             place_type=loc.place_type,
         )
         for loc in locations
+    ]
+
+
+@app.get("/locations/nearby", response_model=list[LocationWithDistance])
+async def find_nearby(
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    radius_meters: float = Query(1000, gt=0, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    point_ewkt = point_to_ewkt(latitude, longitude)
+
+    result = await db.execute(
+        select(
+            LocationModel,
+            geofunc.ST_Distance(LocationModel.geom, func.ST_GeogFromText(point_ewkt)).label("distance"),
+        )
+        .where(geofunc.ST_DWithin(LocationModel.geom, func.ST_GeogFromText(point_ewkt), radius_meters))
+        .order_by(geofunc.ST_Distance(LocationModel.geom, func.ST_GeogFromText(point_ewkt)))
+    )
+
+    locations = result.all()
+    return [
+        LocationWithDistance(
+            id=loc.id,
+            latitude=ewkt_to_lat_lon(loc.geom)[0],
+            longitude=ewkt_to_lat_lon(loc.geom)[1],
+            address=loc.address,
+            place_type=loc.place_type,
+            distance_meters=round(distance, 2),
+        )
+        for loc, distance in locations
     ]
 
 
@@ -185,35 +217,3 @@ async def delete_location(location_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Local não encontrado")
     await db.delete(location)
     await db.commit()
-
-
-@app.get("/locations/nearby", response_model=list[LocationWithDistance])
-async def find_nearby(
-    latitude: float = Query(..., ge=-90, le=90),
-    longitude: float = Query(..., ge=-180, le=180),
-    radius_meters: float = Query(1000, gt=0, le=50000),
-    db: AsyncSession = Depends(get_db),
-):
-    point_ewkt = point_to_ewkt(latitude, longitude)
-
-    result = await db.execute(
-        select(
-            LocationModel,
-            geofunc.ST_Distance(LocationModel.geom, point_ewkt).label("distance"),
-        )
-        .where(geofunc.ST_DWithin(LocationModel.geom, point_ewkt, radius_meters))
-        .order_by(geofunc.ST_Distance(LocationModel.geom, point_ewkt))
-    )
-
-    locations = result.all()
-    return [
-        LocationWithDistance(
-            id=loc.id,
-            latitude=ewkt_to_lat_lon(loc.geom)[0],
-            longitude=ewkt_to_lat_lon(loc.geom)[1],
-            address=loc.address,
-            place_type=loc.place_type,
-            distance_meters=round(distance, 2),
-        )
-        for loc, distance in locations
-    ]
