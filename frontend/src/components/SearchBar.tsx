@@ -4,6 +4,7 @@ type RadiusOption = 5 | 10 | 20;
 
 interface SearchBarProps {
   onSearch: (term: string, radius: number) => void;
+  disabled?: boolean;
 }
 
 const RADIUS_OPTIONS: { value: RadiusOption; label: string }[] = [
@@ -12,7 +13,7 @@ const RADIUS_OPTIONS: { value: RadiusOption; label: string }[] = [
   { value: 20, label: "20 km" },
 ];
 
-export default function SearchBar({ onSearch }: SearchBarProps) {
+export default function SearchBar({ onSearch, disabled = false }: SearchBarProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [radius, setRadius] = useState<RadiusOption>(10);
 
@@ -36,6 +37,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
           placeholder="Tipo de local (ex: Campo de futebol)"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          disabled={disabled}
         />
       </div>
 
@@ -47,6 +49,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
           id="search-radius"
           value={radius}
           onChange={(e) => setRadius(Number(e.target.value) as RadiusOption)}
+          disabled={disabled}
         >
           {RADIUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -56,8 +59,8 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
         </select>
       </div>
 
-      <button type="submit" className="search-button">
-        Buscar
+      <button type="submit" className="search-button" disabled={disabled}>
+        {disabled ? "Buscando..." : "Buscar"}
       </button>
     </form>
   );

@@ -1,33 +1,36 @@
-
-import { useState, useMemo } from "react";
+import { useState, useCallback } from "react";
 
 import MapView from "./components/MapView";
 import SearchBar from "./components/SearchBar";
-import { mockLocations } from "./data/mockLocations";
-import { filterLocationsByTypeAndRadius } from "./utils/geo";
-import type { MockLocation } from "./types/location";
+import { searchNearbyLocations, type Location } from "./services/api";
 import "./index.css";
 import "./App.css";
 
 function App() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [radius, setRadius] = useState(10);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const center: [number, number] = [-48.845, -26.304];
 
-  const handleSearch = (term: string, r: number) => {
-    setSearchTerm(term);
-    setRadius(r);
-  };
+  const handleSearch = useCallback(async (term: string, radiusKm: number) => {
+    setLoading(true);
+    setError(null);
 
-  const filteredLocations = useMemo((): MockLocation[] => {
-    return filterLocationsByTypeAndRadius(
-      mockLocations,
-      searchTerm,
-      center[1],
-      center[0],
-      radius
-    ) as MockLocation[];
-  }, [searchTerm, radius]);
+    try {
+      const results = await searchNearbyLocations({
+        latitude: center[1],
+        longitude: center[0],
+        radius_meters: radiusKm * 1000,
+        place_type: term || undefined,
+      });
+      setLocations(results);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro desconhecido");
+      setLocations([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [center]);
 
   return (
     <main className="app">
@@ -38,18 +41,23 @@ function App() {
             Visualização interativa de localizações geográficas.
           </p>
         </div>
-
       </header>
 
       <section className="workspace">
         <aside className="sidebar">
           <h2>Busca</h2>
 
-          <SearchBar onSearch={handleSearch} />
+          <SearchBar onSearch={handleSearch} disabled={loading} />
+
+          {error && (
+            <div className="error-message" role="alert">
+              {error}
+            </div>
+          )}
 
           <div className="info-card">
             <span className="info-label">Localizações</span>
-            <strong>{filteredLocations.length}</strong>
+            <strong>{locations.length}</strong>
             <span className="info-description">
               Pontos encontrados
             </span>
@@ -66,7 +74,7 @@ function App() {
         </aside>
 
         <section className="map-panel" aria-label="Mapa interativo">
-          <MapView locations={filteredLocations} center={center} />
+          <MapView locations={locations} center={center} />
         </section>
       </section>
     </main>

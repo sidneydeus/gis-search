@@ -280,6 +280,30 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
+.search-button:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.search-input-group input:disabled,
+.search-radius-group select:disabled {
+  background: var(--input-bg-disabled, #f5f5f5);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.error-message {
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
