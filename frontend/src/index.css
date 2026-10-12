@@ -1,0 +1,179 @@
+:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  color: #182230;
+  background: #f3f5f8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app {
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  color: #1769aa;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+h1 {
+  margin: 8px 0;
+  font-size: clamp(24px, 3vw, 32px);
+}
+
+.app-header p,
+.sidebar p {
+  color: #667085;
+  line-height: 1.6;
+}
+
+.app-header p {
+  margin: 0;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid #dce3eb;
+  border-radius: 24px;
+  background: #fff;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d99727;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 20px;
+  min-height: 650px;
+}
+
+.sidebar,
+.map-panel {
+  overflow: hidden;
+  border: 1px solid #e1e6ed;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.sidebar {
+  padding: 22px;
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  font-size: 18px;
+}
+
+.sidebar p {
+  font-size: 14px;
+}
+
+.info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #e7ebf0;
+  border-radius: 12px;
+}
+
+.info-label {
+  color: #667085;
+  font-size: 12px;
+}
+
+.info-card strong {
+  font-size: 22px;
+}
+
+.info-description {
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sidebar .sidebar-note {
+  margin-top: 24px;
+  font-size: 12px;
+}
+
+.map-panel {
+  min-width: 0;
+  min-height: 650px;
+}
+
+.map-component {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 650px;
+}
+
+@media (max-width: 800px) {
+  .app {
+    padding: 16px;
+  }
+
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    order: 2;
+  }
+
+  .map-panel,
+  .map-component {
+    min-height: 480px;
+  }
+}
