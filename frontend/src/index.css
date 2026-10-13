@@ -7,6 +7,19 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --card-bg: #ffffff;
+  --accent: #1769aa;
+  --accent-bg: #e8f0fa;
+  --accent-hover: #125a94;
+  --accent-border: #1769aa;
+  --border: #e1e6ed;
+  --text: #182230;
+  --text-h: #182230;
+  --text-muted: #667085;
+  --input-bg: #fff;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
 * {
@@ -145,6 +158,8 @@ h1 {
 .map-panel {
   min-width: 0;
   min-height: 650px;
+  position: relative;
+  z-index: 1;
 }
 
 .map-component {

@@ -503,7 +503,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  z-index: 1000;
+  z-index: 9999;
   animation: fadeIn 0.2s ease;
 }
 
@@ -522,6 +522,7 @@
   overflow-y: auto;
   box-shadow: var(--shadow-lg, 0 20px 40px rgba(0, 0, 0, 0.15));
   animation: slideUp 0.2s ease;
+  z-index: 10000;
 }
 
 @keyframes slideUp {
