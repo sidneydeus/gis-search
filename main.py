@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, String, Text, select, func, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
@@ -11,7 +12,9 @@ from geoalchemy2.shape import to_shape
 from shapely.geometry import Point, mapping
 from typing import Optional, List
 
-DATABASE_URL = "postgresql+asyncpg://gis_user:gis_password@localhost:5432/gis_search"
+import os
+
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://gis_user:gis_password@localhost:5432/gis_search")
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
@@ -85,6 +88,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="GIS Search API", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/health")
 async def health_check():
@@ -129,23 +140,29 @@ async def list_locations(db: AsyncSession = Depends(get_db)):
     ]
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 @app.get("/locations/nearby", response_model=list[LocationWithDistance])
 async def find_nearby(
     latitude: float = Query(..., ge=-90, le=90),
     longitude: float = Query(..., ge=-180, le=180),
     radius_meters: float = Query(1000, gt=0, le=50000),
+    place_type: Optional[str] = Query(None, description="Filtrar por tipo de local"),
     db: AsyncSession = Depends(get_db),
 ):
     point_ewkt = point_to_ewkt(latitude, longitude)
 
-    result = await db.execute(
-        select(
-            LocationModel,
-            geofunc.ST_Distance(LocationModel.geom, func.ST_GeogFromText(point_ewkt)).label("distance"),
-        )
-        .where(geofunc.ST_DWithin(LocationModel.geom, func.ST_GeogFromText(point_ewkt), radius_meters))
-        .order_by(geofunc.ST_Distance(LocationModel.geom, func.ST_GeogFromText(point_ewkt)))
-    )
+    query = select(
+        LocationModel,
+        geofunc.ST_Distance(LocationModel.geom, func.ST_GeogFromText(point_ewkt)).label("distance"),
+    ).where(geofunc.ST_DWithin(LocationModel.geom, func.ST_GeogFromText(point_ewkt), radius_meters))
+
+    if place_type:
+        query = query.where(LocationModel.place_type.ilike(f"%{place_type}%"))
+
+    query = query.order_by(geofunc.ST_Distance(LocationModel.geom, func.ST_GeogFromText(point_ewkt)))
+
+    result = await db.execute(query)
 
     locations = result.all()
     return [
