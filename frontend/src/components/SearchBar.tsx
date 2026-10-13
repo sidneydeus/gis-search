@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 
-type RadiusOption = 5 | 10 | 20;
+type RadiusOption = 5 | 10 | 20 | 100;
 
 interface SearchBarProps {
   onSearch: (term: string, radius: number) => void;
@@ -11,6 +11,7 @@ const RADIUS_OPTIONS: { value: RadiusOption; label: string }[] = [
   { value: 5, label: "5 km" },
   { value: 10, label: "10 km" },
   { value: 20, label: "20 km" },
+  { value: 100, label: "100 km" },
 ];
 
 export default function SearchBar({ onSearch, disabled = false }: SearchBarProps) {

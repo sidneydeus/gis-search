@@ -96,7 +96,7 @@ export default function MapView({ locations, center = [-48.845, -26.304] }: MapV
     <arcgis-map
       ref={mapElementRef}
       className="map-component"
-      basemap="arcgis/topographic"
+      basemap="arcgis/streets"
       center={center}
       zoom={13}
       onarcgisViewReadyChange={handleMapReady}

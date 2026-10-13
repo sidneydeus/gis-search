@@ -63,7 +63,7 @@ docker-compose down -v
 
 ### Busca Geoespacial (PostGIS)
 - `GET /locations/nearby` - Buscar locais próximos
-  - Query params: `latitude`, `longitude`, `radius_meters` (opcional, padrão 1000m, máx 50000m)
+  - Query params: `latitude`, `longitude`, `radius_meters` (opcional, padrão 1000m, máx 100000m)
 
 ### Modelo de Local
 ```json

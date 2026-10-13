@@ -146,7 +146,7 @@ from fastapi.middleware.cors import CORSMiddleware
 async def find_nearby(
     latitude: float = Query(..., ge=-90, le=90),
     longitude: float = Query(..., ge=-180, le=180),
-    radius_meters: float = Query(1000, gt=0, le=50000),
+    radius_meters: float = Query(1000, gt=0, le=100000),
     place_type: Optional[str] = Query(None, description="Filtrar por tipo de local"),
     db: AsyncSession = Depends(get_db),
 ):
