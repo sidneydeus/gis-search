@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, String, Text, select, func, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
@@ -11,7 +12,9 @@ from geoalchemy2.shape import to_shape
 from shapely.geometry import Point, mapping
 from typing import Optional, List
 
-DATABASE_URL = "postgresql+asyncpg://gis_user:gis_password@localhost:5432/gis_search"
+import os
+
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://gis_user:gis_password@localhost:5432/gis_search")
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
