@@ -59,3 +59,27 @@ export async function getAllLocations(): Promise<Location[]> {
 
   return response.json();
 }
+
+export async function updateLocation(id: string, location: Partial<Omit<Location, "id" | "distance_meters">>): Promise<Location> {
+  const response = await fetch(`${API_BASE_URL}/locations/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(location),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erro ao atualizar localização: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function deleteLocation(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/locations/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erro ao excluir localização: ${response.statusText}`);
+  }
+}

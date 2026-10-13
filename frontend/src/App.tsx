@@ -1,12 +1,14 @@
+import { Routes, Route } from "react-router-dom";
 import { useState, useCallback } from "react";
 
 import MapView from "./components/MapView";
 import SearchBar from "./components/SearchBar";
+import AdminLocations from "./components/AdminLocations";
 import { searchNearbyLocations, type Location } from "./services/api";
 import "./index.css";
 import "./App.css";
 
-function App() {
+function HomePage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,15 +36,6 @@ function App() {
 
   return (
     <main className="app">
-      <header className="app-header">
-        <div>
-          <h1>Buscador geográfico</h1>
-          <p>
-            Visualização interativa de localizações geográficas.
-          </p>
-        </div>
-      </header>
-
       <section className="workspace">
         <aside className="sidebar">
           <h2>Busca</h2>
@@ -78,6 +71,19 @@ function App() {
         </section>
       </section>
     </main>
+  );
+}
+
+function AdminPage() {
+  return <AdminLocations />;
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/admin" element={<AdminPage />} />
+    </Routes>
   );
 }
 
